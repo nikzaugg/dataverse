@@ -5,354 +5,238 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.stream.Stream;
 
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.experimental.runners.Enclosed;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 
-/**
- *
- * @author michael
- */
-@RunWith(Enclosed.class)
 public class StringUtilTest {
 
-    public StringUtilTest() {
+    /**
+     * Test of isEmpty method, of class StringUtil.
+     */
+    @ParameterizedTest
+    @MethodSource("inputsForTestIsEmpty")
+    public void testIsEmpty(boolean isValid, String inputString) {
+        assertEquals( isValid, StringUtil.isEmpty(inputString) );
+    }
+
+    // arguments for parameterized test - testIsEmpty
+    private static Stream<Arguments> inputsForTestIsEmpty() {
+        return Stream.of(
+            Arguments.of(true, null),
+            Arguments.of(true, ""),
+            Arguments.of(true, " " ),
+            Arguments.of(true, "\t"),
+            Arguments.of(true, "\t \t \n"),
+            Arguments.of(false, "a")
+        );
+    }
+
+    /**
+     * Test of isAlphaNumeric method, of class StringUtil.
+     */
+    @ParameterizedTest
+    @MethodSource("inputsForTestIsAlphaNumeric")
+    public void testIsAlphaNumeric(boolean isValid, String inputString) {
+        assertEquals( isValid, StringUtil.isAlphaNumeric(inputString) );
+    }
+
+    // arguments for parameterized test - testIsAlphaNumeric
+    private static Stream<Arguments> inputsForTestIsAlphaNumeric() {
+        return Stream.of(
+            Arguments.of(true, "abc" ),
+            Arguments.of(true, "1230" ),
+            Arguments.of(true, "1230abc" ),
+            Arguments.of(true, "1230abcABC" ),
+            Arguments.of(false, "1230abcABC#" )
+        );
+    }
+
+    /**
+     * Test of isAlphaNumericChar method, of class StringUtil.
+     */
+    @ParameterizedTest
+    @MethodSource("inputsForTestIsAlphaNumericChar")
+    public void testIsAlphaNumericChar(boolean isValid, char inputChar) {
+        assertEquals( isValid, StringUtil.isAlphaNumericChar(inputChar) );
+    }
+
+    // arguments for parameterized test - testIsAlphaNumericChar
+    private static Stream<Arguments> inputsForTestIsAlphaNumericChar() {
+        return Stream.of(
+            Arguments.of(true, 'a' ),
+            Arguments.of(true, 'f' ),
+            Arguments.of(true, 'z' ),
+            Arguments.of(true, '0' ),
+            Arguments.of(true, '1' ),
+            Arguments.of(true, '9' ),
+            Arguments.of(true, 'A' ),
+            Arguments.of(true, 'G' ),
+            Arguments.of(true, 'Z' ),
+            Arguments.of(false, '@' )
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputsForTestSubstringIncludingLast")
+    public void testSubstringIncludingLast(String str, String separator, String expectedString) {
+        assertEquals( expectedString, StringUtil.substringIncludingLast(str, separator) );
+    }
+
+    // arguments for parameterized test - testSubstringIncludingLast
+    private static Stream<Arguments> inputsForTestSubstringIncludingLast() {
+        return Stream.of(
+            // interface-based partitioning
+            Arguments.of(null, null, null),
+            Arguments.of(null, "", null),
+            Arguments.of(null, "d", null),
+
+            Arguments.of("", null, ""),
+            Arguments.of("", "", ""),
+            Arguments.of("", "abcdfg", ""),
+
+            Arguments.of("abcdfg", null, ""),
+            Arguments.of("abcdfg", "", ""),
+            Arguments.of("abcdfg", "d", "dfg"),
+
+            // functionality-based partitioning
+            Arguments.of("abcdfg" , null, ""),
+            Arguments.of("abcdfg", "h", ""),
+            Arguments.of("abcdfg", "b", "bcdfg")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputsForTestToOption")
+    public void testToOption(String inputString, Optional<String> expected ) {
+        assertEquals(expected, StringUtil.toOption(inputString));
+    }
+
+    // arguments for parameterized test - testToOption
+    private static Stream<Arguments> inputsForTestToOption() {
+        return Stream.of(
+            Arguments.of(null, Optional.empty()),
+            Arguments.of("", Optional.empty()),
+            Arguments.of("    leadingWhitespace", Optional.of("leadingWhitespace")),
+            Arguments.of("trailingWhiteSpace    ", Optional.of("trailingWhiteSpace")),
+            Arguments.of("someString", Optional.of("someString")),
+            Arguments.of("some string with spaces", Optional.of("some string with spaces"))
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("inputsForTestSanitizeFileDirectory")
+    public void testSanitizeFileDirectory(String inputString, String expected, boolean aggressively) {
+        assertEquals(expected, StringUtil.sanitizeFileDirectory(inputString, aggressively));
     }
     
-    @BeforeClass
-    public static void setUpClass() {
+    // arguments for parameterized test - testSanitizeFileDirectory
+    private static Stream<Arguments> inputsForTestSanitizeFileDirectory() {
+        return Stream.of(
+            Arguments.of("some\\path\\to\\a\\directory", "some/path/to/a/directory", false),
+            Arguments.of("some\\//path\\//to\\//a\\//directory", "some/path/to/a/directory", false),
+            // starts with / or - or . or whitepsace
+            Arguments.of("/some/path/to/a/directory", "some/path/to/a/directory", false),
+            Arguments.of("-some/path/to/a/directory", "some/path/to/a/directory", false),
+            Arguments.of(".some/path/to/a/directory", "some/path/to/a/directory", false),
+            Arguments.of(" some/path/to/a/directory", "some/path/to/a/directory", false),
+            // ends with / or - or . or whitepsace
+            Arguments.of("some/path/to/a/directory/", "some/path/to/a/directory", false),
+            Arguments.of("some/path/to/a/directory-", "some/path/to/a/directory", false),
+            Arguments.of("some/path/to/a/directory.", "some/path/to/a/directory", false),
+            Arguments.of("some/path/to/a/directory ", "some/path/to/a/directory", false),
+
+            Arguments.of("", null, false), Arguments.of("/", null, false),
+
+            // aggressively
+            Arguments.of("some/path/to/a/dire{`~}ctory", "some/path/to/a/dire.ctory", true),
+            Arguments.of("some/path/to/a/directory\\.\\.", "some/path/to/a/directory", true));
+    }
+
+    @Test
+    public void testHtml2Text() {
+        assertEquals(StringUtil.html2text("be <b>bold</b>!"), "be bold!");
+        assertEquals(StringUtil.html2text(null), null);
+        assertEquals(StringUtil.html2text("<p><b>Description:</b><br />\n"
+                + "Data were taken May-June 2003 and 2005. Flux units are in mJy per 31 arcsecond beam.\n"
+                + "</p>\n"
+                + "\n"
+                + "<p><b>Telescope Information</b><br />\n"
+                + "<a href=\"http://www.submm.caltech.edu/cso/\">Caltech Submillimeter Observatory</a></p>\n"
+                + "\n"
+                + "<p><b>Status:</b><br />\n"
+                + "Final</p>\n"
+                + "\n"
+                + "<p><b>Sampling:</b><br />\n"
+                + "Sensitivity: Average 1 sigma rms = 10 mJy per beam.<br />\n"
+                + "Waveband: 1120 microns<br />\n"
+                + "Resolution: 31 arcsecond beam in 10 arcsecond pixels (diffuse large-scale structure is lost)\n"
+                + "</p>\n"
+                + "\n"
+                + "<p><b>Areal Coverage:</b><br />\n"
+                + "11 square degrees\n"
+                + "</p>\n"
+                + "\n"
+                + "<p><b>Map Center (Galactic):</b><br />\n"
+                + "NA<br />\n"
+                + "NA</p>\n"
+                + "\n"
+                + "<p><b>Map Center (J2000):</b><br />\n"
+                + "RA = 18:29:00<br />\n"
+                + "Dec = +00:30:00 </p>"), "Description: Data were taken May-June 2003 and 2005. Flux units are in mJy per 31 arcsecond beam. Telescope Information Caltech Submillimeter Observatory Status: Final Sampling: Sensitivity: Average 1 sigma rms = 10 mJy per beam. Waveband: 1120 microns Resolution: 31 arcsecond beam in 10 arcsecond pixels (diffuse large-scale structure is lost) Areal Coverage: 11 square degrees Map Center (Galactic): NA NA Map Center (J2000): RA = 18:29:00 Dec = +00:30:00");
+        assertEquals(StringUtil.htmlArray2textArray(Arrays.asList("be <b>bold</b>!")), Arrays.asList("be bold!"));
+        assertEquals(StringUtil.htmlArray2textArray(null), Collections.emptyList());
     }
     
-    @AfterClass
-    public static void tearDownClass() {
+    @Test
+    public void testNullToEmpty() {
+        assertEquals( "hello", StringUtil.nullToEmpty("hello") );
+        assertEquals( "", StringUtil.nullToEmpty(null) );
     }
     
-    @Before
-    public void setUp() {
+    @Test
+    public void testSymmetricEncryption() {
+        String source = "Hello, world! This is an encryption test";
+        String password = "12345678";
+        final String encrypted = StringUtil.encrypt(source, password);
+        final String decrypted = StringUtil.decrypt(encrypted, password);
+        
+        assertEquals(source, decrypted);
     }
     
-    @After
-    public void tearDown() {
+    @Test
+    public void testIsTrue() {
+        Stream.of("yes", "Yes", "  yes  ", "1", "allow", "tRuE")
+            .forEach( v -> assertTrue(StringUtil.isTrue(v)) );
+        
+        Stream.of("es", "no", " 0 s  ", "0", "x", "false")
+            .forEach( v -> assertFalse(StringUtil.isTrue(v)) );
+        
+        assertFalse( StringUtil.isTrue(null) );
     }
 
-    @RunWith(Parameterized.class)
-    public static class TestIsEmpty {
-
-        public boolean isValid;
-        public String inputString;
-        
-        public TestIsEmpty(boolean isValid, String inputString) {
-            this.isValid = isValid;
-            this.inputString = inputString;
-        }
-
-        @Parameters
-        public static Collection<Object[]> parameters() {
-            return Arrays.asList(
-                    new Object[][] { 
-                        { true, null },
-                        { true, "" },
-                        { true, " " },
-                        { true, "\t" },
-                        { true, "\t \t \n" },
-                        { false, "a" },
-                    }
-            );
-        }
-
-        /**
-         * Test of isEmpty method, of class StringUtil.
-         */
-        @Test
-        public void testIsEmpty() {
-            assertEquals( isValid, StringUtil.isEmpty(inputString) );
-        }
+    @Test
+    public void testNonEmpty_normalString() {
+        String expected = "someString";
+        assertTrue(StringUtil.nonEmpty(expected));
     }
 
-    @RunWith(Parameterized.class)
-    public static class TestIsAlphaNumeric {
-
-        public boolean isValid;
-        public String inputString;
-        
-        public TestIsAlphaNumeric(boolean isValid, String inputString) {
-            this.isValid = isValid;
-            this.inputString = inputString;
-        }
-
-        @Parameters
-        public static Collection<Object[]> parameters() {
-            return Arrays.asList(
-                    new Object[][] { 
-                        { true, "abc" },
-                        { true, "1230" },
-                        { true, "1230abc" },
-                        { true, "1230abcABC" },
-                        { false, "1230abcABC#" },
-                    }
-            );
-        }
-
-        /**
-         * Test of isAlphaNumeric method, of class StringUtil.
-         */
-        @Test
-        public void testIsAlphaNumeric() {
-            assertEquals( isValid, StringUtil.isAlphaNumeric(inputString) );
-        }
+    @Test
+    public void testNonEmpty_null() {
+        String expected = null;
+        assertFalse(StringUtil.nonEmpty(expected));
     }
 
-    @RunWith(Parameterized.class)
-    public static class TestIsAlphaNumericChar {
-
-        public boolean isValid;
-        public char inputChar;
-        
-        public TestIsAlphaNumericChar(boolean isValid, char inputChar) {
-            this.isValid = isValid;
-            this.inputChar = inputChar;
-        }
-
-        @Parameters
-        public static Collection<Object[]> parameters() {
-            return Arrays.asList(
-                    new Object[][] { 
-                        { true, 'a' },
-                        { true, 'f' },
-                        { true, 'z' },
-                        { true, '0' },
-                        { true, '1' },
-                        { true, '9' },
-                        { true, 'A' },
-                        { true, 'G' },
-                        { true, 'Z' },
-                        { false, '@' },
-                    }
-            );
-        }
-
-        /**
-         * Test of isAlphaNumericChar method, of class StringUtil.
-         */
-        @Test
-        public void testIsAlphaNumericChar() {
-            assertEquals( isValid, StringUtil.isAlphaNumericChar(inputChar) );
-        }
-    }
-
-    @RunWith(Parameterized.class)
-    public static class TestSubstringIncludingLast {
-
-        public String str;
-        public String separator;
-        public String expectedString;
-        
-        public TestSubstringIncludingLast(String str, String separator, String expectedString) {
-            this.str = str;
-            this.separator = separator;
-            this.expectedString = expectedString;
-        }
-
-        @Parameters
-        public static Collection<Object[]> parameters() {
-            return Arrays.asList(
-                    new Object[][] { 
-                        // interface-based partitioning
-                        {null, null, null},
-                        {null, "", null},
-                        {null, "d", null},
-
-                        {"", null, ""},
-                        {"", "", ""},
-                        {"", "abcdfg", ""},
-
-                        {"abcdfg", null, ""},
-                        {"abcdfg", "", ""},
-                        {"abcdfg", "d", "dfg"},
-
-                        // functionality-based partitioning
-                        {"abcdfg" , null, ""},
-                        {"abcdfg", "h", ""},
-                        {"abcdfg", "b", "bcdfg"},
-                    }
-            );
-        }
-
-        @Test
-        public void testSubstringIncludingLast() {
-            assertEquals( expectedString, StringUtil.substringIncludingLast(str, separator) );
-        }
-    }
-
-    @RunWith(Parameterized.class)
-    public static class TestToOption {
-
-        public String inputString;
-        public Optional<String> expected;
-
-        public TestToOption(String inputString, Optional<String> expected) {
-            this.inputString = inputString;
-            this.expected = expected;
-        }
-
-        @Parameters
-        public static Collection<Object[]> parameters() {
-            return Arrays.asList(
-                    new Object[][] { 
-                        {null, Optional.empty()},
-                        {"", Optional.empty()},
-                        {"    leadingWhitespace", Optional.of("leadingWhitespace")},
-                        {"trailingWhiteSpace    ", Optional.of("trailingWhiteSpace")},
-                        {"someString", Optional.of("someString")},
-                        {"some string with spaces", Optional.of("some string with spaces")}
-                    }
-            );
-        }
-
-        @Test
-        public void testToOption() {
-            assertEquals(expected, StringUtil.toOption(inputString));
-        }
-    }
-
-    @RunWith(Parameterized.class)
-    public static class TestSanitizeFileDirectory {
-
-        public String inputString;
-        public String expected;
-        public boolean aggressively;
-
-        public TestSanitizeFileDirectory(String inputString, String expected, boolean aggressively) {
-            this.inputString = inputString;
-            this.expected = expected;
-            this.aggressively = aggressively;
-        }
-
-        @Parameters
-        public static Collection<Object[]> parameters() {
-            return Arrays.asList(
-                    new Object[][] { 
-                        {"some\\path\\to\\a\\directory", "some/path/to/a/directory", false},
-                        {"some\\//path\\//to\\//a\\//directory", "some/path/to/a/directory", false},
-                        // starts with / or - or . or whitepsace
-                        {"/some/path/to/a/directory", "some/path/to/a/directory", false},
-                        {"-some/path/to/a/directory", "some/path/to/a/directory", false},
-                        {".some/path/to/a/directory", "some/path/to/a/directory", false},
-                        {" some/path/to/a/directory", "some/path/to/a/directory", false},
-                        // ends with / or - or . or whitepsace
-                        {"some/path/to/a/directory/", "some/path/to/a/directory", false},
-                        {"some/path/to/a/directory-", "some/path/to/a/directory", false},
-                        {"some/path/to/a/directory.", "some/path/to/a/directory", false},
-                        {"some/path/to/a/directory ", "some/path/to/a/directory", false},
-
-                        {"", null, false},
-                        {"/", null, false},
-
-                        // aggressively
-                        {"some/path/to/a/dire{`~}ctory", "some/path/to/a/dire.ctory", true},
-                        {"some/path/to/a/directory\\.\\.", "some/path/to/a/directory", true},
-                    }
-            );
-        }
-
-        @Test
-        public void testSanitizeFileDirectory() {
-            assertEquals(expected, StringUtil.sanitizeFileDirectory(inputString, aggressively));
-        }
-    }
-
-    public static class StringUtilNoParamTest{
-
-        @Test
-        public void testHtml2Text() {
-            assertEquals(StringUtil.html2text("be <b>bold</b>!"), "be bold!");
-            assertEquals(StringUtil.html2text(null), null);
-            assertEquals(StringUtil.html2text("<p><b>Description:</b><br />\n"
-                    + "Data were taken May-June 2003 and 2005. Flux units are in mJy per 31 arcsecond beam.\n"
-                    + "</p>\n"
-                    + "\n"
-                    + "<p><b>Telescope Information</b><br />\n"
-                    + "<a href=\"http://www.submm.caltech.edu/cso/\">Caltech Submillimeter Observatory</a></p>\n"
-                    + "\n"
-                    + "<p><b>Status:</b><br />\n"
-                    + "Final</p>\n"
-                    + "\n"
-                    + "<p><b>Sampling:</b><br />\n"
-                    + "Sensitivity: Average 1 sigma rms = 10 mJy per beam.<br />\n"
-                    + "Waveband: 1120 microns<br />\n"
-                    + "Resolution: 31 arcsecond beam in 10 arcsecond pixels (diffuse large-scale structure is lost)\n"
-                    + "</p>\n"
-                    + "\n"
-                    + "<p><b>Areal Coverage:</b><br />\n"
-                    + "11 square degrees\n"
-                    + "</p>\n"
-                    + "\n"
-                    + "<p><b>Map Center (Galactic):</b><br />\n"
-                    + "NA<br />\n"
-                    + "NA</p>\n"
-                    + "\n"
-                    + "<p><b>Map Center (J2000):</b><br />\n"
-                    + "RA = 18:29:00<br />\n"
-                    + "Dec = +00:30:00 </p>"), "Description: Data were taken May-June 2003 and 2005. Flux units are in mJy per 31 arcsecond beam. Telescope Information Caltech Submillimeter Observatory Status: Final Sampling: Sensitivity: Average 1 sigma rms = 10 mJy per beam. Waveband: 1120 microns Resolution: 31 arcsecond beam in 10 arcsecond pixels (diffuse large-scale structure is lost) Areal Coverage: 11 square degrees Map Center (Galactic): NA NA Map Center (J2000): RA = 18:29:00 Dec = +00:30:00");
-            assertEquals(StringUtil.htmlArray2textArray(Arrays.asList("be <b>bold</b>!")), Arrays.asList("be bold!"));
-            assertEquals(StringUtil.htmlArray2textArray(null), Collections.emptyList());
-        }
-        
-        @Test
-        public void testNullToEmpty() {
-            assertEquals( "hello", StringUtil.nullToEmpty("hello") );
-            assertEquals( "", StringUtil.nullToEmpty(null) );
-        }
-        
-        @Test
-        public void testSymmetricEncryption() {
-            String source = "Hello, world! This is an encryption test";
-            String password = "12345678";
-            final String encrypted = StringUtil.encrypt(source, password);
-            final String decrypted = StringUtil.decrypt(encrypted, password);
-            
-            assertEquals(source, decrypted);
-        }
-        
-        @Test
-        public void testIsTrue() {
-            Stream.of("yes", "Yes", "  yes  ", "1", "allow", "tRuE")
-                .forEach( v -> assertTrue(StringUtil.isTrue(v)) );
-            
-            Stream.of("es", "no", " 0 s  ", "0", "x", "false")
-                .forEach( v -> assertFalse(StringUtil.isTrue(v)) );
-            
-            assertFalse( StringUtil.isTrue(null) );
-        }
-
-        @Test
-        public void testNonEmpty_normalString() {
-            String expected = "someString";
-            assertTrue(StringUtil.nonEmpty(expected));
-        }
-
-        @Test
-        public void testNonEmpty_null() {
-            String expected = null;
-            assertFalse(StringUtil.nonEmpty(expected));
-        }
-
-        @Test
-        public void testNonEmpty_emptyString() {
-            String expected = "";
-            assertFalse(StringUtil.nonEmpty(expected));
-        }
+    @Test
+    public void testNonEmpty_emptyString() {
+        String expected = "";
+        assertFalse(StringUtil.nonEmpty(expected));
     }
 }
